@@ -1,13 +1,17 @@
-from tests import PyResTests, Basic, TestProcess
 from pyres import ResQ
-from pyres.worker import Worker
 from pyres.job import Job
+from pyres.worker import Worker
+from tests import PyResTests, Basic, TestProcess
+import tests
 import os
+
+
 class ResQTests(PyResTests):
+    
     def test_enqueue(self):
         self.resq.enqueue(Basic,"test1")
         self.resq.enqueue(Basic,"test2")
-        ResQ._enqueue(Basic, "test3")
+        ResQ._enqueue(Basic, "test3", server=tests.CXN_STR)
         assert self.redis.llen("resque:queue:basic") == 3
         assert self.redis.sismember('resque:queues','basic')
     
@@ -40,7 +44,7 @@ class ResQTests(PyResTests):
     
     def test_redis_property(self):
         from redis import Redis
-        rq = ResQ(server="localhost:6379")
+        rq = ResQ(server=tests.CXN_STR)
         red = Redis()
         rq2 = ResQ(server=red)
         self.assertRaises(Exception, rq.redis,[Basic])
@@ -50,17 +54,17 @@ class ResQTests(PyResTests):
         self.resq.enqueue(TestProcess)
         info = self.resq.info()
         assert info['queues'] == 2
-        assert info['servers'] == ['localhost:6379']
+        assert info['servers'] == ['localhost:6345'], "%s != ['localhost:6379']" %info['servers']
         assert info['workers'] == 0
-        worker = Worker(['basic'])
+        worker = Worker(['basic'], server=tests.CXN_STR)
         worker.register_worker()
         info = self.resq.info()
         assert info['workers'] == 1
     
     def test_workers(self):
-        worker = Worker(['basic'])
+        worker = Worker(['basic'], server=tests.CXN_STR)
         worker.register_worker()
-        name = "%s:%s:%s" % (os.uname()[1],os.getpid(),'basic')
+        name = "%s:%s:%s" % (os.uname()[1], os.getpid(), 'basic')
         assert len(self.resq.workers()) == 1
         #assert Worker.find(name, self.resq) in self.resq.workers()
     
@@ -68,8 +72,9 @@ class ResQTests(PyResTests):
         self.resq.enqueue_from_string('tests.Basic','basic','test1')
         name = "%s:%s:%s" % (os.uname()[1],os.getpid(),'basic')
         assert self.redis.llen("resque:queue:basic") == 1
+
         job = Job.reserve('basic', self.resq)
-        worker = Worker(['basic'])
+        worker = Worker(['basic'], server=tests.CXN_STR)
         worker.process(job)
         assert not self.redis.get('resque:worker:%s' % worker)
         assert not self.redis.get("resque:stat:failed")
