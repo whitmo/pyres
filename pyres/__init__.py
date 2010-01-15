@@ -162,15 +162,12 @@ class ResQ(object):
         return None
     
     @classmethod
-    def _enqueue(cls, klass, *args):
+    def _enqueue(cls, klass, *args, **redis_args):
         queue = getattr(klass,'queue', None)
-        #print cls._res
-        _self = cls()
+        _self = cls(**redis_args)
         if queue:
             class_name = '%s.%s' % (klass.__module__, klass.__name__)
-            #print class_name
             _self.push(queue, {'class':class_name,'args':args})
-            #Job.create(queue, klass,*args)
 
 class Stat(object):
     def __init__(self, name, resq):
