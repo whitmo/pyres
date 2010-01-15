@@ -1,10 +1,14 @@
 import datetime
 from base import BaseBackend
 from pyres import ResQ
+
 class RedisBackend(BaseBackend):
     def save(self, resq=None):
-        if not resq:
+        if isinstance(resq, dict):
+            resq = ResQ(**resq)
+        elif resq is None:
             resq = ResQ()
+
         data = {
             'failed_at' : str(datetime.datetime.now()),
             'payload'   : self._payload,
