@@ -1,8 +1,9 @@
 from __future__ import with_statement
-from paver.easy import *
-import tarfile
-import os
 
+from paver.easy import *
+from paver.setuputils import setup
+import os
+import tarfile
 
 options(
     current_env = path(os.environ.get('VIRTUAL_ENV', '.')),
@@ -19,10 +20,36 @@ options(
                   script="%(venv)/bin/",
                   default_port='6379',
                   default_conf=''),
+    minilib = Bunch(extra_files=["virtual"])
     )
+
+
+setup(
+    name='pyres',
+    version='0.4.1',
+    description='Python Resque clone',
+    author='Matt George',
+    license='MIT',
+    author_email='mgeorge@gmail.com',
+    url='http://github.com/binarydud/pyres',
+    packages=['pyres', 'resweb', 'pyres/failure'],
+    package_data={'resweb': ['templates/*.mustache','media/*']},
+    scripts=['scripts/pyres_worker', 'scripts/pyres_web'],
+    zip_safe = True,
+    install_requires=[
+        'simplejson>=2.0.9',
+        'itty>=0.6.2',
+        'redis>=0.6.0',
+        'pystache>=0.1.0'
+    ],
+)
+
 
 @task
 def install_build_reqs(options):
+    """
+    Installs requirements for building
+    """
     for pkg in options.virtualenv.packages:
         sh("pip install %s" %pkg)
 
@@ -40,7 +67,7 @@ def get_filename_and_dir(url):
 
 
 def grab_unpack(url, dest):
-    from urlgrabber.grabber import urlgrab, URLGrabError
+    from urlgrabber.grabber import urlgrab
     from urlgrabber.progress import text_progress_meter
     filename, dirname = get_filename_and_dir(url)
     urlgrab(url, dest / filename, progress_obj=text_progress_meter())
@@ -93,6 +120,9 @@ def make_redis_links(options):
 @task
 @needs('install_redis')
 def launch_redis(options):
+    """
+    launches the redis server with default config
+    """
     try:
         sh("redis-server %s" %options.redis.default_conf)
     except KeyboardInterrupt:
