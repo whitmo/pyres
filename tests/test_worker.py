@@ -2,17 +2,25 @@ from tests import PyResTests, Basic, TestProcess, ErrorObject
 from pyres import ResQ
 from pyres.job import Job
 from pyres.worker import Worker
+import tests
 import os
+
+
 class WorkerTests(PyResTests):
+
+    def setUp(self):
+        super(WorkerTests, self).setUp()
+        self.worker = Worker(['basic'], server=tests.CXN_STR)
+        
     def test_worker_init(self):
         from pyres.exceptions import NoQueueError
         self.assertRaises(NoQueueError, Worker,[])
         self.assertRaises(Exception, Worker,['test'],TestProcess())
     
     def test_startup(self):
-        worker = Worker(['basic'])
+        worker = self.worker
         worker.startup()
-        name = "%s:%s:%s" % (os.uname()[1],os.getpid(),'basic')
+        name = "%s:%s:%s" % (os.uname()[1], os.getpid(), 'basic')
         assert self.redis.sismember('resque:workers',name)
         import signal
         assert signal.getsignal(signal.SIGTERM) == worker.shutdown_all
@@ -21,13 +29,13 @@ class WorkerTests(PyResTests):
         assert signal.getsignal(signal.SIGUSR1) == worker.kill_child
     
     def test_register(self):
-        worker = Worker(['basic'])
+        worker = self.worker
         worker.register_worker()
         name = "%s:%s:%s" % (os.uname()[1],os.getpid(),'basic')
         assert self.redis.sismember('resque:workers',name)
     
     def test_unregister(self):
-        worker = Worker(['basic'])
+        worker = self.worker
         worker.register_worker()
         name = "%s:%s:%s" % (os.uname()[1],os.getpid(),'basic')
         assert self.redis.sismember('resque:workers',name)
@@ -38,13 +46,13 @@ class WorkerTests(PyResTests):
         name = "%s:%s:%s" % (os.uname()[1],os.getpid(),'basic')
         self.resq.enqueue(Basic,"test1")
         job = Job.reserve('basic', self.resq)
-        worker = Worker(['basic'])
+        worker = self.worker
         worker.working_on(job)
         assert self.redis.exists("resque:worker:%s" % name)
     
     def test_processed(self):
         name = "%s:%s:%s" % (os.uname()[1],os.getpid(),'basic')
-        worker = Worker(['basic'])
+        worker = self.worker
         worker.processed()
         assert self.redis.exists("resque:stat:processed")
         assert self.redis.exists("resque:stat:processed:%s" % name)
@@ -56,7 +64,7 @@ class WorkerTests(PyResTests):
     
     def test_failed(self):
         name = "%s:%s:%s" % (os.uname()[1],os.getpid(),'basic')
-        worker = Worker(['basic'])
+        worker = self.worker
         worker.failed()
         assert self.redis.exists("resque:stat:failed")
         assert self.redis.exists("resque:stat:failed:%s" % name)
@@ -70,7 +78,7 @@ class WorkerTests(PyResTests):
         name = "%s:%s:%s" % (os.uname()[1],os.getpid(),'basic')
         self.resq.enqueue(Basic,"test1")
         job = Job.reserve('basic', self.resq)
-        worker = Worker(['basic'])
+        worker = self.worker
         worker.process(job)
         assert not self.redis.get('resque:worker:%s' % worker)
         assert not self.redis.get("resque:stat:failed")
@@ -83,7 +91,7 @@ class WorkerTests(PyResTests):
         
     
     def test_signals(self):
-        worker = Worker(['basic'])
+        worker = self.worker
         worker.startup()
         import inspect, signal
         frame = inspect.currentframe()
@@ -98,7 +106,7 @@ class WorkerTests(PyResTests):
     
     def test_job_failure(self):
         self.resq.enqueue(ErrorObject)
-        worker = Worker(['basic'])
+        worker = self.worker
         worker.process()
         name = "%s:%s:%s" % (os.uname()[1],os.getpid(),'basic')
         assert not self.redis.get('resque:worker:%s' % worker)
@@ -106,19 +114,19 @@ class WorkerTests(PyResTests):
         assert self.redis.get("resque:stat:failed:%s" % name) == 1
     
     def test_get_job(self):
-        worker = Worker(['basic'])
+        worker = self.worker
         self.resq.enqueue(Basic,"test1")
         job = Job.reserve('basic', self.resq)
         worker.working_on(job)
         name = "%s:%s:%s" % (os.uname()[1],os.getpid(),'basic')
         assert worker.job() == ResQ.decode(self.redis.get('resque:worker:%s' % name))
         worker.done_working()
-        w2 = Worker(['basic'])
+        w2 = Worker(['basic'], tests.CXN_STR)
         print w2.job()
         assert w2.job() == {}
     
     def test_working(self):
-        worker = Worker(['basic'])
+        worker = self.worker
         self.resq.enqueue_from_string('tests.Basic','basic','test1')
         worker.register_worker()
         job = Job.reserve('basic', self.resq)
@@ -131,7 +139,7 @@ class WorkerTests(PyResTests):
     
     def test_started(self):
         import datetime
-        worker = Worker(['basic'])
+        worker = self.worker
         dt = datetime.datetime.now()
         worker.started = dt
         name = "%s:%s:%s" % (os.uname()[1],os.getpid(),'basic')
@@ -139,3 +147,5 @@ class WorkerTests(PyResTests):
         assert worker.started == datetime.datetime.strptime(dt.strftime('%Y-%m-%d %H:%M:%S'),'%Y-%m-%d %H:%M:%S')
         worker.started = None
         assert not self.redis.exists('resque:worker:%s:started' % name)
+
+
