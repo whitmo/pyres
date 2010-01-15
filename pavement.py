@@ -98,6 +98,7 @@ def launch_redis(options):
     except KeyboardInterrupt:
         info("\nredis exiting")
 
+
 try:
     from paver.virtual import bootstrap
 except ImportError:
