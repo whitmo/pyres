@@ -1,21 +1,26 @@
 from __future__ import with_statement
 
 from paver.easy import *
+from paver import doctools
 #from paver.setuputils import setup
 import os
 import tarfile
 
 options(
+    sphinx=Bunch(docroot='docs',
+                 builddir="_build",
+                 sourcedir=""
+                 ),
     current_env = path(os.environ.get('VIRTUAL_ENV', '.')),
-    virtualenv=Bunch(
-        packages=["pip",
-                  "virtualenv",
-                  "urlgrabber"], #not using packages_to_install to
-                                 #override default behavior behavior
-        install_paver=True,
-        script_name='bootstrap.py',
-        paver_command_line='after_bootstrap'
-        ),
+    virtualenv=Bunch(packages_to_install=["pip"],
+                     packages=["virtualenv",
+                               "urlgrabber",
+                               ], #not using packages_to_install to
+                     #override default behavior behavior
+                     install_paver=True,
+                     script_name='bootstrap.py',
+                     paver_command_line='after_bootstrap'
+                     ),
     redis = Bunch(url="http://redis.googlecode.com/files/redis-1.2.0.tar.gz",
                   script="%(venv)/bin/",
                   default_port='6379',
@@ -128,6 +133,14 @@ def launch_redis(options):
     except KeyboardInterrupt:
         info("\nredis exiting")
 
+
+@task
+def html(options):
+    try:
+        import sphinx
+    except ImportError:
+        sh('pip install sphinx')
+    call_task("paver.doctools.html")
 
 try:
     from paver.virtual import bootstrap
