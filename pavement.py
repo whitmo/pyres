@@ -2,7 +2,7 @@ from __future__ import with_statement
 
 from paver.easy import *
 from paver import doctools
-#from paver.setuputils import setup
+from paver.setuputils import setup
 import os
 import tarfile
 
@@ -29,25 +29,25 @@ options(
     )
 
 
-## setup(
-##     name='pyres',
-##     version='0.4.1',
-##     description='Python Resque clone',
-##     author='Matt George',
-##     license='MIT',
-##     author_email='mgeorge@gmail.com',
-##     url='http://github.com/binarydud/pyres',
-##     packages=['pyres', 'resweb', 'pyres/failure'],
-##     package_data={'resweb': ['templates/*.mustache','media/*']},
-##     scripts=['scripts/pyres_worker', 'scripts/pyres_web'],
-##     zip_safe = True,
-##     install_requires=[
-##         'simplejson>=2.0.9',
-##         'itty>=0.6.2',
-##         'redis>=0.6.0',
-##         'pystache>=0.1.0'
-##     ],
-## )
+setup(
+    name='pyres',
+    version='0.4.1',
+    description='Python Resque clone',
+    author='Matt George',
+    license='MIT',
+    author_email='mgeorge@gmail.com',
+    url='http://github.com/binarydud/pyres',
+    packages=['pyres', 'resweb', 'pyres/failure'],
+    package_data={'resweb': ['templates/*.mustache','media/*']},
+    scripts=['scripts/pyres_worker', 'scripts/pyres_web'],
+    zip_safe = True,
+    install_requires=[
+        'simplejson>=2.0.9',
+        'itty>=0.6.2',
+        'redis>=0.6.0',
+        'pystache>=0.1.0'
+    ],
+)
 
 
 @task
@@ -133,6 +133,23 @@ def launch_redis(options):
     except KeyboardInterrupt:
         info("\nredis exiting")
 
+@task
+@needs('install_redis')
+def install_w_redis(options):
+    """
+    Install pyres and redis into your current virtualenv
+    """
+    call_task('setuptools.command.install')
+
+@task
+@needs('install_redis')
+def develop_w_redis(options):
+    """
+    Install pyres as a development install and redis into your current
+    virtualenv
+    """
+    call_task('setuptools.command.develop')
+
 
 @task
 def html(options):
@@ -141,6 +158,21 @@ def html(options):
     except ImportError:
         sh('pip install sphinx')
     call_task("paver.doctools.html")
+html.__doc__ = paver.doctools.html.__doc__
+
+
+@task
+def test(options):
+    try:
+        import nose
+    except ImportError:
+        sh('pip install nose')
+    try:
+        call_task('nose.commands.nosetests')
+    except :
+        import pdb, sys; pdb.post_mortem(sys.exc_info()[2])
+    path('tests/dump.rdb').unlink()
+    path('tests/redis-test.log').unlink()
 
 try:
     from paver.virtual import bootstrap
