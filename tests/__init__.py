@@ -7,7 +7,6 @@ import unittest
 import subprocess
 
 CXN_STR = _cxn_str = "localhost:6345"
-_proc = None
 
 
 def setUp():
@@ -15,14 +14,15 @@ def setUp():
     resq = ResQ(server=_cxn_str)
     try:
         resq.redis.connect()
+        print "Connected to redis on %s" %_cxn_str
     except redis.ConnectionError:
+        print "Tryng to start redis on %s" %_cxn_str
         venv = os.environ.get('VIRTUAL_ENV')
         rspath = path.join(venv, 'bin', 'redis-server')
         if path.exists(rspath): # they've done a pavement or virtualenv setup
             # start redis with the test config
-            global _proc
             args = [rspath, path.join(path.abspath('.'), 'tests/test-redis.conf')]
-            _proc = subprocess.Popen(args)
+            subprocess.Popen(args)
             cxn = False
             while cxn == False:
                 try:
