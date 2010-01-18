@@ -167,12 +167,11 @@ def test(options):
         import nose
     except ImportError:
         sh('pip install nose')
-    try:
-        call_task('nose.commands.nosetests')
-    except :
-        import pdb, sys; pdb.post_mortem(sys.exc_info()[2])
-    path('tests/dump.rdb').unlink()
-    path('tests/redis-test.log').unlink()
+
+    call_task('nose.commands.nosetests')
+    path('tests/dump.rdb').rm()
+    path('tests/redis-test.log').rm()
+
 
 try:
     from paver.virtual import bootstrap
